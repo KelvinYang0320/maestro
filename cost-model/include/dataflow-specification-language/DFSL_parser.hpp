@@ -58,8 +58,6 @@ namespace maestro {
 		                       PE_Decl, PE_Identifier, PE_Body, PE_NumPE, PE_VectorWidth, PE_MultPrecision, PE_AddPrecision,
 		                       Buffer_Decl, Buffer_Identifier, Buffer_Body, Buffer_Size, Buffer_L2, Buffer_L1,
 		                       Noc_Decl, NoC_Identifier, NoC_Name, Noc_Name_Identifier, SubNoC_Body, NoC_Body, NoC_BW, NoC_Latency,
-		                       //felix
-		                       OffChip_BW
 		                       };
 
 		class InputParser : public MAESTROClass {
@@ -79,8 +77,9 @@ namespace maestro {
 				std::string file_name_;
 				std::ifstream in_file_;
 
-				void ParseError(int line_num) {
+				void ParseError(int line_num, std::string err = "Not reported") {
 					std::cout << "[MAESTRO Parser] Parse error at line number " + std::to_string(line_num) + " in target file " +  file_name_  << std::endl;
+          std::cout << "Error was: " + err << std::endl;
 					exit(-1);
 				}
 		}; // End of class InputParser
@@ -92,7 +91,7 @@ namespace maestro {
 
 				void ParseDFSL(std::shared_ptr<DFA::NeuralNetwork> network) {
 					std::string line;
-					boost::char_separator<char> sep(" ,->():\t;");
+					boost::char_separator<char> sep(" ,->():\t\n\r;");
 					int line_number = 1;
 
 //					network = std::make_shared<DFA::NeuralNetwork>();
@@ -169,7 +168,7 @@ namespace maestro {
                     network->SetName(tkn);
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Network_Identifier");
                   }
 
                   break;
@@ -183,7 +182,7 @@ namespace maestro {
                     state_ = ParserState::Layer_Identifier;
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Network_Body: " + tkn);
                   }
                   break;
                 }
@@ -204,7 +203,7 @@ namespace maestro {
                 case ParserState::Layer_Body: {
                   if(tkn == DFSL::brace_close_) {
                     if(curr_layer == nullptr) {
-                      ParseError(line_number);
+                      ParseError(line_number, "curr_layer is nullptr");
                     }
                     curr_layer->SetDimensions(dim_vector);
 
@@ -251,7 +250,7 @@ namespace maestro {
                     state_ = ParserState::Dataflow_Decl;
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Layer_Body");
                   }
 
                   break;
@@ -357,7 +356,7 @@ namespace maestro {
                     //TODO
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Unsupported layer type");
                   }
                   state_ = ParserState::Layer_Body;
 
@@ -369,7 +368,7 @@ namespace maestro {
                     state_ = ParserState::Dimension_Body;
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Dimension_Dec1");
                   }
                   break;
                 }
@@ -383,7 +382,7 @@ namespace maestro {
                       tmp_name = tkn;
                     }
                     else {
-                      ParseError(line_number);
+                      ParseError(line_number, "Bad token in state Dimension_Body");
                     }
                     state_ = ParserState::Dimension_Size;
                   }
@@ -402,7 +401,7 @@ namespace maestro {
 
 
                   if(size == 0) {
-                    ParseError(line_number);
+                    ParseError(line_number, "Dimension size was 0");
                   }
                   else {
 
@@ -422,7 +421,7 @@ namespace maestro {
                     state_ = ParserState::Dataflow_Body;
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Dataflow_Dec1");
                   }
                   break;
                 }
@@ -444,7 +443,7 @@ namespace maestro {
                     state_ = ParserState::Dataflow_ClusterSize;
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Dataflow_Body");
                   }
                   break;
                 }
@@ -480,7 +479,7 @@ namespace maestro {
                   }
 
                   if(map_size <= 0) {
-                    ParseError(line_number);
+                    ParseError(line_number, "map_size was <= 0");
                   }
 
                   get_dim_size = false;
@@ -518,7 +517,7 @@ namespace maestro {
                   }
 
                   if(map_offset <= 0) {
-                    ParseError(line_number);
+                    ParseError(line_number, "map_offset was <= 0");
                   }
 
                   get_dim_size = false;
@@ -528,31 +527,12 @@ namespace maestro {
 
                 case ParserState::Dataflow_MapVar: {
                   if(tkn.empty()) {
-                    ParseError(line_number);
+                    ParseError(line_number, "Token was empty in Dataflow_MapVar state");
                   }
 
                   switch(curr_directive_class) {
                   case DFA::directive::DirectiveClass::TemporalMap: {
                     curr_directive = std::make_shared<DFA::directive::TemporalMap> (map_size, map_offset, tkn);
-                    //felix20210528
-                    if (tkn=="R" or tkn=="S"){
-                      if (map_size != map_offset){
-                        std::cout<<"[Error] Invalid mapping at line number: "<< line_number<<" in " <<file_name_<< ". Tile size of "<<tkn<<"("<<map_size<<") should be equal to tile offset of "<<tkn<<"("<<map_offset<<")."<<std::endl;
-                        exit(-1);
-//                        std::cout<<"[Warning] Invalid mapping: Line_number: " << line_number << ":"<< line<<std::endl;
-                      }
-                      for (auto d: *dim_vector){
-                        if (d->GetName() == tkn){
-                          if(d->GetSize() != map_size){
-//                            std::cout<<"[Error] Invalid mapping: ";
-                            std::cout<<"[Error] Invalid mapping at line number: "<< line_number<<" in " <<file_name_<<". Tile size of "<<tkn<<"("<<map_size<<") should be equal to dimension size of "<<tkn<<"("<<d->GetSize()<<")."<<std::endl;
-                            exit(-1);
-//                            std::cout<<"[Warning] Invalid mapping: Line_number: " << line_number << ":"<< line<<std::endl;
-                          }
-                        }
-                      }
-                    }
-                    //
                     break;
                   }
                   case DFA::directive::DirectiveClass::SpatialMap: {
@@ -560,7 +540,7 @@ namespace maestro {
                     break;
                   }
                   default: {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad curr_directive_class");
                   }
                   }
 
@@ -600,7 +580,7 @@ namespace maestro {
                   }
 
                   if(cluster_size <= 0) {
-                    ParseError(line_number);
+                    ParseError(line_number, "cluster_size was <= 0");
                   }
 
                   get_dim_size = false;
@@ -628,7 +608,7 @@ namespace maestro {
                     state_ = ParserState::Acclerator_Body;
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Accelerator_Identifier");
                   }
                   break;
                 }
@@ -644,7 +624,7 @@ namespace maestro {
                     state_ = ParserState::NoC_Identifier;
                   }
                   else {
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Accelerator_Body");
                   }
                   break;
                 }
@@ -655,7 +635,7 @@ namespace maestro {
                   }
                   else {
                     //TODO: Add an error message
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state PE_Identifier");
                   }
                   break;
                 }
@@ -666,7 +646,7 @@ namespace maestro {
                   }
                   else {
                     //TODO: Add an error message
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Buffer_Identifier");
                   }
                   break;
                 }
@@ -697,7 +677,7 @@ namespace maestro {
                       break;
                     }
                     else {
-                      ParseError(line_number);
+                      ParseError(line_number, "Bad token in state PE_Body");
                     }
 
                   break;
@@ -847,7 +827,7 @@ namespace maestro {
                   }
                   else {
                     //TODO: Add an error message
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state NoC_Identifier");
                   }
                   break;
                 }
@@ -869,7 +849,7 @@ namespace maestro {
                   }
                   else {
                     //TODO: Add an error message
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state Noc_Name_Identifier");
                   }
                   break;
                 }
@@ -886,7 +866,7 @@ namespace maestro {
                   }
                   else {
                     //TODO: Add an error message
-                    ParseError(line_number);
+                    ParseError(line_number, "Bad token in state SubNoC_Body");
                   }
                   break;
                 }
@@ -894,7 +874,7 @@ namespace maestro {
                 case ParserState::NoC_BW: {
                   int noc_bw = std::atoi(tkn.c_str());
                   if(noc_bw < 1) {
-                    ParseError(line_number);
+                    ParseError(line_number, "noc_bw was < 1");
                   }
                   else {
                     noc_bandwidth_.push_back(noc_bw);
@@ -906,7 +886,7 @@ namespace maestro {
                 case ParserState::NoC_Latency: {
                   int noc_latency = std::atoi(tkn.c_str());
                   if(noc_latency < 1) {
-                    ParseError(line_number);
+                    ParseError(line_number, "noc_latency was < 1");
                   }
                   else {
                     noc_latency_.push_back(noc_latency);
@@ -916,7 +896,7 @@ namespace maestro {
                 }
 
                 default: {
-                  ParseError(line_number);
+                  ParseError(line_number, "Bad parser state");
                   break;
                 }
 							} // End of switch(state_)
