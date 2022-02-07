@@ -7,10 +7,17 @@ MAESTRO is an open-source tool for modeling and evaluating the performance and e
 - [MAESTRO Website](http://maestro.ece.gatech.edu/)
 - [MAESTRO Docs](http://maestro.ece.gatech.edu/docs/build/html/index.html)
 
-
 # Codebase
 
 ## Updates
+### Feb, 7th, 2022
+Update README for custom PyTorch models and refactor this feature
+* [Custom Pytorch](./tools/frontend/torch-example/)
+
+### Apr 29th, 2021
+Added ability to import custom PyTorch models 
+We updated the hardware description file by [Owen Hoffend](https://github.com/OwenHoffend).
+
 ### May 26th, 2021
 
 We updated the hardware description file, added off-chip bandwidth added as constraint.
