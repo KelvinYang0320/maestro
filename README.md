@@ -15,8 +15,7 @@ Update README for custom PyTorch models and refactor this feature
 * [Custom Pytorch](./tools/frontend/torch-example/)
 
 ### Apr 29th, 2021
-Added ability to import custom PyTorch models 
-We updated the hardware description file by [Owen Hoffend](https://github.com/OwenHoffend).
+Fixed whitespace error causing failures in DFSL_parser & Added ability to import custom PyTorch models by [Owen Hoffend](https://github.com/OwenHoffend).
 
 ### May 26th, 2021
 
